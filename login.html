@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Sistem Asuransi Mikro Heksa</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome untuk Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        darkpurple: {
+                            900: '#0a061a',
+                            950: '#04020b',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #04020b;
+            background-image: 
+                radial-gradient(at 10% 20%, rgba(124, 58, 237, 0.25) 0px, transparent 50%),
+                radial-gradient(at 90% 80%, rgba(30, 58, 138, 0.3) 0px, transparent 50%),
+                radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 24px 24px;
+            background-attachment: fixed;
+        }
+
+        /* Kotak Login Glassmorphism dengan Potongan Diagonal */
+        .login-card-container {
+            background: rgba(15, 12, 30, 0.85);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(139, 92, 246, 0.25);
+            box-shadow: 0 30px 70px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(124, 58, 237, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Efek Panel Samping Miring (Diagonal Slash) */
+        .login-card-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(88, 28, 135, 0.4) 0%, rgba(30, 27, 75, 0.7) 100%);
+            clip-path: polygon(30% 0, 100% 0, 100% 100%, 0% 100%);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .login-content-inner {
+            position: relative;
+            z-index: 2;
+        }
+
+        input:-webkit-autofill {
+            -webkit-box-shadow: 0 0 0 30px #0f0c1e inset !important;
+            -webkit-text-fill-color: white !important;
+        }
+    </style>
+</head>
+<body class="text-slate-100 font-sans min-h-screen flex items-center justify-center p-4">
+
+    <div class="login-card-container w-full max-w-4xl rounded-3xl p-8 md:p-14 flex flex-col md:flex-row items-center justify-between gap-12">
+        
+        <!-- Sisi Kiri: Form Login -->
+        <div class="login-content-inner w-full md:w-1/2 space-y-6">
+            <div class="space-y-1">
+                <div class="flex items-center space-x-3 mb-3">
+                    <div class="bg-white/95 px-4 py-2 rounded-xl shadow-lg ring-1 ring-white/20 inline-flex items-center justify-center">
+                        <img src="logo.png" alt="Logo Heksa" class="h-10 w-auto object-contain">
+                    </div>
+                    <span class="text-xs font-bold text-purple-300 tracking-wider uppercase">PT Heksa Solution Insurance</span>
+                </div>
+                <h1 class="text-3xl font-extrabold text-white tracking-wide">Login</h1>
+                <p class="text-xs text-slate-400">Silakan masukkan akun operasional Anda.</p>
+            </div>
+
+            <form onsubmit="handleLogin(event)" class="space-y-4 text-xs">
+                <div class="space-y-1">
+                    <label class="block font-medium text-slate-300">Username</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                            <i class="fa-solid fa-user"></i>
+                        </span>
+                        <input type="text" id="login-username" required placeholder="Masukkan username..." class="w-full bg-slate-950/80 border border-purple-500/30 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none focus:border-purple-500 shadow-inner font-mono">
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="block font-medium text-slate-300">Password</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                            <i class="fa-solid fa-lock"></i>
+                        </span>
+                        <input type="password" id="login-password" required placeholder="Masukkan password..." class="w-full bg-slate-950/80 border border-purple-500/30 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none focus:border-purple-500 shadow-inner font-mono">
+                    </div>
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-3.5 px-4 rounded-xl text-sm transition shadow-lg shadow-purple-600/40 flex items-center justify-center space-x-2">
+                        <span>Login</span>
+                        <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                    </button>
+                </div>
+
+                <div class="text-center pt-2 text-[11px] text-slate-400 space-y-1">
+                    <p>Belum punya akun? <a href="#" class="text-purple-400 font-semibold hover:underline">Sign Up</a></p>
+                    <p><a href="#" class="text-slate-400 hover:text-white transition">Forgot Password?</a></p>
+                </div>
+            </form>
+        </div>
+
+        <!-- Sisi Kanan: Panel Sambutan (Welcome Back) -->
+        <div class="login-content-inner w-full md:w-1/2 text-center md:text-right space-y-3 md:pl-8">
+            <h2 class="text-3xl md:text-4xl font-black text-white tracking-wider drop-shadow-md">WELCOME BACK!</h2>
+            <p class="text-xs md:text-sm text-purple-200 font-medium tracking-wide">Sistem Operasional Asuransi Mikro • Heksa Insurance</p>
+            <div class="pt-4 flex justify-center md:justify-end">
+                <div class="w-16 h-1.5 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function handleLogin(e) {
+            e.preventDefault();
+            let user = document.getElementById('login-username').value.trim();
+            let pass = document.getElementById('login-password').value.trim();
+
+            if (user && pass) {
+                localStorage.setItem('heksa_logged_in', 'true');
+                localStorage.setItem('heksa_username', user);
+                localStorage.setItem('heksa_role', user.toLowerCase().includes('admin') ? 'Administrator' : 'Staff Underwriter');
+                window.location.href = 'MicroSehat.html';
+            } else {
+                alert('Mohon masukkan username dan password.');
+            }
+        }
+    </script>
+</body>
+</html>
