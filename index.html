@@ -10,6 +10,9 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <!-- FontAwesome untuk Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Supabase JS Client v2 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <script>
         tailwind.config = {
             theme: {
@@ -187,7 +190,7 @@
         <section id="tab-dashboard" class="tab-content space-y-6">
             <div class="glass-card p-4 rounded-xl shadow-xl space-y-3">
                 <div class="text-center font-bold text-purple-400 text-xs tracking-widest uppercase border-b border-white/10 pb-2">
-                    INFORMASI - DATABASE PESERTA INFORCE PREMI (MSSQL)
+                    INFORMASI - DATABASE PESERTA INFORCE PREMI (SUPABASE)
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-12 gap-2 text-xs items-center">
@@ -359,9 +362,9 @@
                     <div class="bg-purple-500/10 text-purple-400 w-12 h-12 rounded-2xl flex items-center justify-center mx-auto text-xl border border-purple-500/20 shadow-lg">
                         <i class="fa-solid fa-cloud-arrow-up"></i>
                     </div>
-                    <h3 class="text-lg font-bold text-white">Upload Data Inforce (MSSQL Server)</h3>
+                    <h3 class="text-lg font-bold text-white">Upload Data Inforce (Supabase Cloud Database)</h3>
                     <p class="text-xs text-slate-400 leading-relaxed">
-                        Unggah file CSV / Excel untuk memasukkan data polis inforce langsung ke database SQL Server.
+                        Unggah file CSV / Excel untuk memasukkan data polis inforce langsung ke database Supabase.
                     </p>
                 </div>
 
@@ -558,8 +561,18 @@
         <p>Aplikasi Asuransi Mikro Multi-Produk • PT Heksa Solution Insurance</p>
     </footer>
 
-    <!-- JavaScript Logika MSSQL Server API Lengkap -->
+    <!-- JavaScript Logika Supabase Integrasi Lengkap -->
     <script>
+        // ==========================================
+        // KONFIGURASI SUPABASE DATABASE
+        // (Silakan ganti nilai di bawah dengan URL & Anon Key Supabase Anda)
+        // ==========================================
+        const SUPABASE_URL = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZjY3ZyZnlpaXVjeHhudmpqeW9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxNTU5NTMsImV4cCI6MjEwNTczMTk1M30.J6dTDmD1iCBHcVmYMZIMZ_Uc44zaVdDDYWMZFd9S4QE';
+        const SUPABASE_ANON_KEY = 'sb_publishable_brG4qxZU_Wj0BBnGHbKjHQ_B1DOjspr';
+
+        // Inisialisasi Klien Supabase
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
         let globalDbPremi = [];
         window.allPolisDitemukanForClaim = [];
 
@@ -592,16 +605,21 @@
 
         async function loadDataFromDatabase() {
             try {
-                let response = await fetch('http://localhost:3000/api/inforce');
-                if (response.ok) {
-                    let data = await response.json();
+                // Fetch data dari tabel 'inforce' Supabase
+                const { data, error } = await supabaseClient
+                    .from('inforce')
+                    .select('*');
+
+                if (error) throw error;
+
+                if (data && data.length > 0) {
                     globalDbPremi = data.map(item => ({
                         idPeserta: item.id_peserta,
                         noResi: item.no_resi,
                         noKtp: item.no_ktp,
                         namaTtg: item.nama_tertanggung,
                         kodeProduk: item.kode_produk,
-                        namaProduk: item.Nama_Produk,
+                        namaProduk: item.Nama_Produk || item.nama_produk,
                         umur: item.usia,
                         up: item.uang_pertanggungan,
                         premi: item.premi,
@@ -618,9 +636,11 @@
                         hubunganTtg: item.hubungan_tertanggung
                     }));
                     localStorage.setItem('db_premi_v42', JSON.stringify(globalDbPremi));
+                } else {
+                    globalDbPremi = JSON.parse(localStorage.getItem('db_premi_v42') || '[]');
                 }
             } catch (err) {
-                console.warn('Backend SQL Server offline, menggunakan cache lokal browser:', err);
+                console.warn('Gagal koneksi Supabase, menggunakan cache lokal browser:', err);
                 globalDbPremi = JSON.parse(localStorage.getItem('db_premi_v42') || '[]');
             }
             updateDashboardStats();
@@ -902,7 +922,7 @@
             window.print();
         }
 
-        function handleSearch() {
+        async function handleSearch() {
             let kw = document.getElementById('search-keyword').value.trim().toLowerCase();
             if (!kw) return alert('Masukkan kata kunci pencarian!');
             let db = getDatabasePremi();
@@ -926,13 +946,15 @@
             let container = document.getElementById('search-result-container');
             container.innerHTML = '';
 
+            // Mengambil riwayat klaim dari Supabase / LocalStorage
+            let dbKlaim = getDatabaseKlaim();
+
             Object.keys(groupedProducts).forEach(prodName => {
                 let listProdPolis = groupedProducts[prodName];
                 listProdPolis.sort((a, b) => new Date(b.mulai) - new Date(a.mulai));
                 let found = listProdPolis[0];
 
                 let analisis = analisasKontinuitasPolisKTP(found.noKtp, latestPolisDate);
-                let dbKlaim = getDatabaseKlaim();
                 let polisKlaims = dbKlaim.filter(k => String(k.idPeserta || '').toLowerCase() === String(found.idPeserta || '').toLowerCase());
 
                 let tableManfaatHTML = '';
@@ -1534,13 +1556,13 @@
             return '';
         }
 
-        function handleFileUpload(e) {
+        async function handleFileUpload(e) {
             let file = e.target.files[0];
             if (!file) return;
             document.getElementById('upload-file-name').innerText = file.name;
 
             let reader = new FileReader();
-            reader.onload = function(evt) {
+            reader.onload = async function(evt) {
                 try {
                     let data = new Uint8Array(evt.target.result);
                     let workbook = XLSX.read(data, {type: 'array'});
@@ -1595,55 +1617,52 @@
                         }
 
                         listDataPayload.push({
-                            idPeserta, 
-                            noResi: getFlexibleVal(headers, row, ['NoTtg', 'No Resi', 'No Polis', 'no_resi']) || '-',
-                            noKtp: getFlexibleVal(headers, row, ['No_Ktp', 'No KTP', 'NIK', 'no_ktp']).replace(/[^0-9]/g, '') || '3271000000000000',
-                            namaTtg: getFlexibleVal(headers, row, ['NamaTtg', 'Nama Tertanggung', 'nama_tertanggung']) || 'Peserta Inforce',
-                            kodeProduk: kodeProduk,
-                            namaProduk: namaProduk,
-                            umur: Number(getFlexibleVal(headers, row, ['Umur', 'Usia', 'usia'])) || 35,
-                            up: up,
+                            id_peserta: idPeserta, 
+                            no_resi: getFlexibleVal(headers, row, ['NoTtg', 'No Resi', 'No Polis', 'no_resi']) || '-',
+                            no_ktp: getFlexibleVal(headers, row, ['No_Ktp', 'No KTP', 'NIK', 'no_ktp']).replace(/[^0-9]/g, '') || '3271000000000000',
+                            nama_tertanggung: getFlexibleVal(headers, row, ['NamaTtg', 'Nama Tertanggung', 'nama_tertanggung']) || 'Peserta Inforce',
+                            kode_produk: kodeProduk,
+                            Nama_Produk: namaProduk,
+                            usia: Number(getFlexibleVal(headers, row, ['Umur', 'Usia', 'usia'])) || 35,
+                            uang_pertanggungan: up,
                             premi: premi,
-                            masaAs: masaAs,
-                            mulai: tglMulaiStr,
-                            akhir: tglAkhirStr,
-                            pmNama: getFlexibleVal(headers, row, ['Nama Penerima Manfaat', 'Penerima Manfaat']) || 'Ahli Waris Sah',
-                            descUker: getFlexibleVal(headers, row, ['Desc_Uker', 'Deskripsi Uker']),
-                            nikPegawai: getFlexibleVal(headers, row, ['NIKPegawai', 'NIK Pegawai']),
-                            namaPegawai: getFlexibleVal(headers, row, ['NamaPegawai', 'Nama Pegawai']),
+                            masa_asuransi: masaAs,
+                            tanggal_mulai: tglMulaiStr !== '-' ? tglMulaiStr : null,
+                            tanggal_akhir: tglAkhirStr !== '-' ? tglAkhirStr : null,
+                            nama_penerima_manfaat: getFlexibleVal(headers, row, ['Nama Penerima Manfaat', 'Penerima Manfaat']) || 'Ahli Waris Sah',
+                            desc_uker: getFlexibleVal(headers, row, ['Desc_Uker', 'Deskripsi Uker']),
+                            nik_pegawai: getFlexibleVal(headers, row, ['NIKPegawai', 'NIK Pegawai']),
+                            nama_pegawai: getFlexibleVal(headers, row, ['NamaPegawai', 'Nama Pegawai']),
                             email: getFlexibleVal(headers, row, ['Email']),
-                            noPolis: getFlexibleVal(headers, row, ['NoPolis', 'No Polis']),
-                            idUpload: getFlexibleVal(headers, row, ['IDUpload', 'ID Upload']),
-                            hubunganTtg: getFlexibleVal(headers, row, ['Hubungan dengan Tertanggung', 'Hubungan'])
+                            no_polis: getFlexibleVal(headers, row, ['NoPolis', 'No Polis']),
+                            id_upload: getFlexibleVal(headers, row, ['IDUpload', 'ID Upload']),
+                            hubungan_tertanggung: getFlexibleVal(headers, row, ['Hubungan dengan Tertanggung', 'Hubungan'])
                         });
                     }
 
-                    // Kirim data ke backend MSSQL Server
-                    fetch('http://localhost:3000/api/upload-inforce', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(listDataPayload)
-                    })
-                    .then(res => res.json())
-                    .then(resData => {
-                        alert(`Upload Berhasil ke SQL Server!\n- Berhasil/Update: ${resData.inserted}\n- Error: ${resData.errors}`);
-                        loadDataFromDatabase();
+                    // Upload batch data ke tabel 'inforce' Supabase
+                    const { data: upsertData, error } = await supabaseClient
+                        .from('inforce')
+                        .insert(listDataPayload);
+
+                    if (error) {
+                        console.error('Gagal upload ke Supabase:', error);
+                        alert('Gagal upload ke Supabase: ' + error.message);
+                    } else {
+                        alert(`Upload Berhasil ke Supabase Cloud!\nTotal Data Disimpan: ${listDataPayload.length} Baris`);
+                        await loadDataFromDatabase();
                         switchTab('dashboard');
-                    })
-                    .catch(err => {
-                        console.warn('Backend SQL Server offline:', err);
-                        alert('Gagal terhubung ke server backend MSSQL. Pastikan server Node.js Anda sudah berjalan.');
-                    });
+                    }
 
                 } catch (err) {
                     console.error(err);
-                    alert('Gagal memproses file Excel / CSV.');
+                    alert('Gagal memproses file Excel / CSV: ' + err.message);
                 }
             };
             reader.readAsArrayBuffer(file);
         }
 
-        function saveDataKlaim(e) {
+        async function saveDataKlaim(e) {
             e.preventDefault();
             
             if (!window.currentPolisForClaim || !window.currentPolisForClaim.idPeserta) {
@@ -1666,39 +1685,49 @@
             let tglKeluar = document.getElementById('dk-tglkeluar').value;
 
             let payloadKlaim = {
-                idPeserta: window.currentPolisForClaim.idPeserta,
-                namaProduk: window.currentPolisForClaim.namaProduk,
-                kodeProduk: window.currentPolisForClaim.kodeProduk,
-                jenis: jenis,
-                jumlah: jumlah,
-                rumahSakit: rumahSakit,
+                id_peserta: window.currentPolisForClaim.idPeserta,
+                nama_tertanggung: window.currentPolisForClaim.namaTtg,
+                kode_produk: window.currentPolisForClaim.kodeProduk,
+                jenis_klaim: jenis,
+                jumlah_manfaat: jumlah,
+                rumah_sakit: rumahSakit,
                 diagnosa: diagnosa,
-                tanggalKejadian: tglMasuk,
-                tanggalKeluar: tglKeluar,
-                status: 'Disetujui'
+                tanggal_kejadian: tglMasuk,
+                status_klaim: 'Disetujui'
             };
 
-            // Simpan klaim ke MSSQL Server via API
-            fetch('http://localhost:3000/api/upload-klaim', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify([payloadKlaim])
-            })
-            .then(res => res.json())
-            .then(resData => {
+            try {
+                // Simpan klaim langsung ke tabel 'klaim' Supabase
+                const { data, error } = await supabaseClient
+                    .from('klaim')
+                    .insert([payloadKlaim]);
+
+                if (error) throw error;
+
+                // Simpan ke memori lokal untuk riwayat instan
                 let dbKlaim = getDatabaseKlaim();
-                dbKlaim.push(payloadKlaim);
+                dbKlaim.push({
+                    idPeserta: payloadKlaim.id_peserta,
+                    namaProduk: window.currentPolisForClaim.namaProduk,
+                    kodeProduk: payloadKlaim.kode_produk,
+                    jenis: jenis,
+                    jumlah: jumlah,
+                    rumahSakit: rumahSakit,
+                    diagnosa: diagnosa,
+                    tanggalKejadian: tglMasuk,
+                    tanggalKeluar: tglKeluar,
+                    status: 'Disetujui'
+                });
                 localStorage.setItem('db_klaim_v42', JSON.stringify(dbKlaim));
 
-                alert(`Klaim produk ${window.currentPolisForClaim.namaProduk} berhasil disimpan ke SQL Server!`);
+                alert(`Klaim produk ${window.currentPolisForClaim.namaProduk} berhasil disimpan ke Supabase!`);
                 document.getElementById('form-dk').reset();
                 window.currentPolisForClaim = null;
                 switchTab('dashboard');
-            })
-            .catch(err => {
+            } catch (err) {
                 console.error(err);
-                alert('Gagal menyimpan klaim ke SQL Server. Pastikan backend server menyala.');
-            });
+                alert('Gagal menyimpan klaim ke Supabase: ' + err.message);
+            }
         }
 
         function exportTableToExcel() {
